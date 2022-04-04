@@ -1,15 +1,20 @@
 package com.example.firebase
 
+import android.app.Activity
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.firebase.managers.DatabaseHandler
 import com.example.firebase.managers.DatabaseManager
+import com.example.firebase.managers.StorageHandler
+import com.example.firebase.managers.StorageManager
 import com.example.firebase.model.Post
-
+import com.sangcomz.fishbun.FishBun
+import com.sangcomz.fishbun.adapter.image.impl.GlideAdapter
 
 
 class CreateActivity : BaseActivity() {
@@ -17,6 +22,10 @@ class CreateActivity : BaseActivity() {
     lateinit var iv_photo: ImageView
     var postImg: Uri? = null
     var uris = ArrayList<Uri>()
+
+    var pickedPhoto:Uri? = null
+    var allPhotos = ArrayList<Uri>()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,12 +39,13 @@ class CreateActivity : BaseActivity() {
         val et_body = findViewById<EditText>(R.id.et_body)
         val b_create = findViewById<Button>(R.id.b_create)
 
-//        iv_photo = findViewById<ImageView>(R.id.iv_photo)
-//        val iv_camera = findViewById<ImageView>(R.id.iv_camera)
-//
-//        iv_camera.setOnClickListener {
-//            pickUserPhoto()
-//        }
+
+        iv_photo = findViewById<ImageView>(R.id.iv_photo)
+        val iv_camera = findViewById<ImageView>(R.id.iv_camera)
+
+        iv_camera.setOnClickListener {
+            pickUserPhoto()
+        }
 
         iv_close.setOnClickListener {
             finish()
@@ -45,7 +55,7 @@ class CreateActivity : BaseActivity() {
             val body = et_body.text.toString().trim()
             val post = Post(title, body)
             storeDatabase(post)
-//            storePost(post)
+            storePost(post)
         }
     }
 
@@ -58,38 +68,38 @@ class CreateActivity : BaseActivity() {
 //            .startAlbumWithActivityResultCallback(photoLauncher)
 //    }
 //
-//    val photoLauncher =
-//        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//            if (it.resultCode == Activity.RESULT_OK) {
-//                uris = it.data?.getParcelableArrayListExtra(FishBun.INTENT_PATH) ?: arrayListOf()
-//                postImg = uris.get(0)
-//                iv_photo.setImageURI(postImg)
-//            }
-//        }
-//------------------------------------------------------------------
+    val photoLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                uris = it.data?.getParcelableArrayListExtra(FishBun.INTENT_PATH) ?: arrayListOf()
+                postImg = uris.get(0)
+                iv_photo.setImageURI(postImg)
+            }
+        }
+//----/--------------------------------------------------------------
 //
-//    fun storePost(post: Post) {
-//        if (postImg != null) {
-//            storeStorage(post)
-//        } else {
-//            storeDatabase(post)
-//        }
-//    }
+    fun storePost(post: Post) {
+        if (postImg != null) {
+            storeStorage(post)
+        } else {
+            storeDatabase(post)
+        }
+    }
 
-    //    fun storeStorage(post: Post) {
-//        showLoading(this)
-//        StorageManager.uploadPhoto(postImg!!, object : StorageHandler {
-//            override fun onSuccess(imgUrl: String) {
-//                post.img = imgUrl
-//                storeDatabase(post)
-//            }
-//
-//            override fun onError(exception: Exception?) {
-//                storeDatabase(post)
-//            }
-//        })
-//    }
-//
+        fun storeStorage(post: Post) {
+        showLoading(this)
+        StorageManager.uploadPhoto(postImg!!, object : StorageHandler {
+            override fun onSuccess(imgUrl: String) {
+                post.img = imgUrl
+                storeDatabase(post)
+            }
+
+            override fun onError(exception: Exception?) {
+                storeDatabase(post)
+            }
+        })
+    }
+
     fun storeDatabase(post: Post) {
         DatabaseManager.storePost(post, object : DatabaseHandler {
             override fun onSuccess(post: Post?, posts: ArrayList<Post>) {
@@ -110,4 +120,20 @@ class CreateActivity : BaseActivity() {
         setResult(RESULT_OK, returnIntent)
         finish()
     }
+
+    fun pickUserPhoto(){
+        FishBun.with(this)
+            .setImageAdapter(GlideAdapter())
+            .setMaxCount(1)
+            .setMinCount(1)
+            .setSelectedImages(allPhotos)
+            .startAlbumWithActivityResultCallback(photoLauncher)
+    }
+
+//    val photoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
+//        if (it.resultCode == Activity.RESULT_OK){
+//            allPhotos = it.data?.getParcelableArrayListExtra(FishBun.INTENT_PATH)?: arrayListOf()
+//            iv_photo.setImageURI(pickedPhoto)
+//        }
+//    }
 }
